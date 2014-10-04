@@ -1,0 +1,13 @@
+{
+  "name": "eydis-list",
+  "version": "0.0.1",
+  "main": [
+    "eydis-list.js"
+  ],
+  "dependencies": {
+    "angular": "1.2.x",
+    "eydis-gapi": "*"
+  },
+  "devDependencies": {
+  }
+}
