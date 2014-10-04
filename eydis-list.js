@@ -22,8 +22,10 @@ factory('eydisList', function($gapi, $q){
         us to load the library, the second is where the user provides
         us with the library directory.
       */
+
       var library;
       var library_promise;
+
       /* Do we need to load the library? */
       if(angular.isString(library_name_or_inst)){
         library_promise =  $gapi.load(library_name_or_inst, _version, _root).then(function(){
