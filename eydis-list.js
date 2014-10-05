@@ -1,8 +1,8 @@
-'use strict';
-
+/* globals angular */
 
 angular.module('eydis.list', ['eydis.gapi']).
 factory('eydisList', function($gapi, $q){
+    'use strict';
 
     var create = function(library_name_or_inst, _version, _service, _root){
       var ready_q = $q.defer();
@@ -182,7 +182,7 @@ factory('eydisList', function($gapi, $q){
         Updates an existing item using the library's update() method
         and will update the item in the list if it is present.
       */
-      obj.update = wait_for_loaded(function get(item, no_update){
+      obj.update = wait_for_loaded(function update(item, no_update){
         /* Only update if the item actually has a key */
         if(item.key.urlsafe){
           var data = angular.copy(item);
