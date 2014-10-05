@@ -36,6 +36,29 @@ angular.module('app', ['eydis.list']).
 });
 ```
 
+You could also use route resolve.
+
+```javascript
+angular.module('app', ['eydis.list'])
+.config(function($routeProvider){
+  $routeProvider
+    .when('/example', {
+      templateUrl: 'example/example.html',
+      controller: 'exampleCtrl',
+      controllerAs: 'example',
+      resolve: {
+        files: function(eydisList){
+          return eydisList('drive', 'v2', 'files').ready;
+        }
+      }
+    });
+})
+.controller('exampleCtrl', function(files){
+  this.files = files;
+  this.files.list();
+});
+```
+
 Showing the list in the template is very easy.
 
 ```html
