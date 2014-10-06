@@ -4,13 +4,53 @@ angular.module('eydis.list', ['eydis.gapi']).
 factory('eydisList', function($gapi, $q){
     'use strict';
 
-    var create = function(library_name_or_inst, _version, _service, _root){
+    /*
+      If using an already loaded client specify config as:
+        {
+          library: $gapi.client.drive,
+          resource: 'files'
+        }
+
+      If you want the library to be loaded:
+        {
+          library: 'drive',
+          version: 'v2',
+          resource: 'files'
+        }
+
+      For loading a google cloud endpoints api, specify `api_root`:
+        {
+          library: 'ferris',
+          version: 'v1',
+          resource: 'guestbook',
+          api_root: true
+        }
+
+      You can also specify alternative method to use for the standard `list`, `insert`, `update`, `delete`, and `get`:
+
+        {
+          library: 'drive',
+          version: 'v2',
+          resource: 'files',
+          delete: 'trash'
+        }
+    */
+    var create = function(config){
+      config = angular.extend({
+        list: 'list',
+        insert: 'insert',
+        update: 'update',
+        delete: 'delete',
+        get: 'get'
+      }, config);
+
       var ready_q = $q.defer();
 
       /* Setup our object. We'll return this so all references & methods go here. */
       var obj = {
         items: [],
-        ready: ready_q.promise
+        ready: ready_q.promise,
+        library: null,
       };
 
       /*
@@ -27,17 +67,17 @@ factory('eydisList', function($gapi, $q){
       var library_promise;
 
       /* Do we need to load the library? */
-      if(angular.isString(library_name_or_inst)){
-        library_promise =  $gapi.load(library_name_or_inst, _version, _root).then(function(){
-            library = $gapi.client[library_name_or_inst][_service];
+      if(angular.isString(config.library)){
+        library_promise =  $gapi.load(config.library, config.version, config.api_root).then(function(){
+            library = $gapi.client[config.library][config.resource];
             return library;
         });
       }
       /* Otherwise, we just need to make a wait_for_loaded that has an already resolved promise */
       else {
-        library = library_name_or_inst;
+        library = config.library;
         var lq = $q.defer();
-        lq.resolve(library_name_or_inst);
+        lq.resolve(config.library);
         library_promise = lq.promise();
       }
 
@@ -45,7 +85,8 @@ factory('eydisList', function($gapi, $q){
         When the library is ready, resolve the ready promise.
         This allows usage via route.resolves
       */
-      library_promise.then(function(){
+      library_promise.then(function(library){
+        obj.library = library;
         ready_q.resolve(obj);
       });
 
@@ -70,7 +111,7 @@ factory('eydisList', function($gapi, $q){
       obj.list = wait_for_loaded(function list(params, append){
         /* store these for next page */
         obj.list.list_params = params || {};
-        var p = library.list(params);
+        var p = library[config.list](params);
 
         /* When successful, update our list */
         p.then(function(r){
@@ -109,7 +150,7 @@ factory('eydisList', function($gapi, $q){
          * Any integer will insert the item in that position in the lisy.
       */
       obj.insert = wait_for_loaded(function insert(data, position){
-        var p = library.insert(data);
+        var p = library[config.insert](data);
 
         /* When successful, add the item to our list */
         p.then(function(r){
@@ -141,7 +182,7 @@ factory('eydisList', function($gapi, $q){
 
         /* If the item has a key make a request to remove it */
         if(item.key.urlsafe){
-          return library.delete({item_key: item.key.urlsafe});
+          return library[config.delete]({item_key: item.key.urlsafe});
         }
         /* Otherwise return an empty, successful promise */
         else {
@@ -158,7 +199,7 @@ factory('eydisList', function($gapi, $q){
       obj.get = wait_for_loaded(function get(item, no_update){
         /* Only get if the item actually has a key */
         if(item.key.urlsafe){
-          var p = library.get({item_key: item.key.urlsafe});
+          var p = library[config.get]({item_key: item.key.urlsafe});
           /* When succesful, update the item in our list */
           p.then(function(r){
             if(!no_update){
@@ -188,7 +229,7 @@ factory('eydisList', function($gapi, $q){
           var data = angular.copy(item);
           delete data.key;
           data.item_key = item.key.urlsafe;
-          var p = library.update(data);
+          var p = library[config.update](data);
 
           /* When succesful, update the item in our list */
           p.then(function(r){

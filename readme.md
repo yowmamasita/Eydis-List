@@ -29,7 +29,11 @@ Depend on ``eydis.list`` and inject ``eydisList`` and use it to create a new lis
 angular.module('app', ['eydis.list']).
 .controller('exampleCtrl', function(eydisList){
     /* eydis list will automatically load the appropriate API */
-    this.files = eydisList('drive', 'v2', 'files');
+    this.files = eydisList({
+      library: 'drive',
+      version: 'v2',
+      resource: 'files'
+    });
 
     /* Make the initial call to load the list */
     this.files.list();
@@ -48,7 +52,11 @@ angular.module('app', ['eydis.list'])
       controllerAs: 'example',
       resolve: {
         files: function(eydisList){
-          return eydisList('drive', 'v2', 'files').ready;
+          return eydisList({
+            library: 'drive',
+            version: 'v2',
+            resource: 'files'
+          }).ready;
         }
       }
     });
@@ -96,6 +104,51 @@ While these methods are useful, the service provides some additional functionali
  * ``service.delete(item, [retain])`` will call the delete() method on the API and will optimistically remove the item from the list.
  * ``service.get(item, [no_update])`` will call the get() method on the API and update the item in the list in-place.
  * ``service.update(item, [no_update])`` will call the update() method on the API to update the given item's data and will update the item in the list in-place when the server acknowledges the request. The re-update is usually idepotent but is useful if the server updates things such as modified time.
+
+
+Advanced Configuration
+----------------------
+
+If using an already loaded client specify config as:
+
+```javascript
+{
+  library: $gapi.client.drive,
+  resource: 'files'
+}
+```
+
+If you want the library to be loaded:
+
+```javascript
+{
+  library: 'drive',
+  version: 'v2',
+  resource: 'files'
+}
+```
+
+For loading a google cloud endpoints api, specify ``api_root``:
+
+```javascript
+{
+  library: 'ferris',
+  version: 'v1',
+  resource: 'guestbook',
+  api_root: true
+}
+```
+
+You can also specify alternative method to use for the standard ``list``, ``insert``, ``update``, ``delete``, and ``get``:
+
+```javascript
+{
+  library: 'drive',
+  version: 'v2',
+  resource: 'files',
+  delete: 'trash'
+}
+```
 
 
 License & Contributions
