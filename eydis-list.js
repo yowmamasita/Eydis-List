@@ -116,11 +116,11 @@ factory('eydisList', function($gapi, $q){
         /* When successful, update our list */
         p.then(function(r){
           if(!append){
-            obj.items = r.items;
+            obj.items = r.result.items;
           } else {
-            obj.items = obj.items.concat(r.items);
+            obj.items = obj.items.concat(r.result.items);
           }
-          obj.list.next_page_token = r.next_page_token || r.nextPageToken;
+          obj.list.next_page_token = r.result.next_page_token || r.result.nextPageToken;
           obj.list.more = !!obj.list.next_page_token;
         });
         return p;
@@ -157,9 +157,9 @@ factory('eydisList', function($gapi, $q){
           if(position !== undefined){
             if(position === 'start') position = 0;
             if(position === 'end' || position === -1){
-              obj.items.push(r);
+              obj.items.push(r.result);
             } else {
-              obj.items.splice(position, 0, r);
+              obj.items.splice(position, 0, r.result);
             }
           }
         });
@@ -181,8 +181,8 @@ factory('eydisList', function($gapi, $q){
         }
 
         /* If the item has a key make a request to remove it */
-        if(item.key.urlsafe){
-          return library[config.delete]({item_key: item.key.urlsafe});
+        if(item.datastore_key.urlsafe){
+          return library[config.delete]({item_key: item.datastore_key.urlsafe});
         }
         /* Otherwise return an empty, successful promise */
         else {
@@ -198,14 +198,14 @@ factory('eydisList', function($gapi, $q){
       */
       obj.get = wait_for_loaded(function get(item, no_update){
         /* Only get if the item actually has a key */
-        if(item.key.urlsafe){
-          var p = library[config.get]({item_key: item.key.urlsafe});
+        if(item.datastore_key.urlsafe){
+          var p = library[config.get]({item_key: item.datastore_key.urlsafe});
           /* When succesful, update the item in our list */
           p.then(function(r){
             if(!no_update){
               var index = obj.items.indexOf(item);
               if(index !== -1){
-                obj.items[index] = r;
+                obj.items[index] = r.result;
               }
             }
           });
@@ -225,10 +225,10 @@ factory('eydisList', function($gapi, $q){
       */
       obj.update = wait_for_loaded(function update(item, no_update){
         /* Only update if the item actually has a key */
-        if(item.key.urlsafe){
+        if(item.datastore_key.urlsafe){
           var data = angular.copy(item);
-          delete data.key;
-          data.item_key = item.key.urlsafe;
+          delete data.datastore_key;
+          data.item_key = item.datastore_key.urlsafe;
           var p = library[config.update](data);
 
           /* When succesful, update the item in our list */
@@ -236,7 +236,7 @@ factory('eydisList', function($gapi, $q){
             if(!no_update){
               var index = obj.items.indexOf(item);
               if(index !== -1){
-                obj.items[index] = r;
+                obj.items[index] = r.result;
               }
             }
           });
