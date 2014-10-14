@@ -41,7 +41,8 @@ factory('eydisList', function($gapi, $q){
         insert: 'insert',
         update: 'update',
         delete: 'delete',
-        get: 'get'
+        get: 'get',
+        key_parameter_name: config.api_root ? 'item_key' : 'id'
       }, config);
 
       var ready_q = $q.defer();
@@ -181,8 +182,11 @@ factory('eydisList', function($gapi, $q){
         }
 
         /* If the item has a key make a request to remove it */
-        if(item.datastore_key.urlsafe){
-          return library[config.delete]({item_key: item.datastore_key.urlsafe});
+        var key = get_item_key(item);
+        if(key){
+          var data = {};
+          data[config.key_parameter_name] = key;
+          return library[config.delete](data);
         }
         /* Otherwise return an empty, successful promise */
         else {
@@ -198,8 +202,11 @@ factory('eydisList', function($gapi, $q){
       */
       obj.get = wait_for_loaded(function get(item, no_update){
         /* Only get if the item actually has a key */
-        if(item.datastore_key.urlsafe){
-          var p = library[config.get]({item_key: item.datastore_key.urlsafe});
+        var key = get_item_key(item);
+        if(key){
+          var data = {};
+          data[config.key_parameter_name] = key;
+          var p = library[config.get](data);
           /* When succesful, update the item in our list */
           p.then(function(r){
             if(!no_update){
@@ -225,10 +232,10 @@ factory('eydisList', function($gapi, $q){
       */
       obj.update = wait_for_loaded(function update(item, no_update){
         /* Only update if the item actually has a key */
-        if(item.datastore_key.urlsafe){
-          var data = angular.copy(item);
-          delete data.datastore_key;
-          data.item_key = item.datastore_key.urlsafe;
+        var key = get_item_key(item);
+        if(key){
+          var data = strip_item_key(angular.copy(item));
+          data[config.key_parameter_name] = key;
           var p = library[config.update](data);
 
           /* When succesful, update the item in our list */
@@ -249,6 +256,24 @@ factory('eydisList', function($gapi, $q){
           return d.promise;
         }
       });
+
+      /* Helper function for seeing if an item has a key or not */
+      var get_item_key = function(item){
+        if(item.datastore_key && item.datastore_key.urlsafe) return item.datastore_key.urlsafe;
+        if(item.id) return item.id;
+        return null;
+      };
+
+      /* Helper function to remove the key from an object before submitting it */
+      var strip_item_key = function(item){
+        if(item.datastore_key){
+          delete item.datastore_key;
+        }
+        else if(item.id){
+          delete item.id;
+        }
+        return item;
+      };
 
       return obj;
     };
