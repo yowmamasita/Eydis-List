@@ -8,14 +8,16 @@ factory('eydisList', function($gapi, $q){
       If using an already loaded client specify config as:
         {
           library: $gapi.client.drive,
-          resource: 'files'
+          resource: 'files',
+          id_parameter: 'fileId'
         }
 
       If you want the library to be loaded:
         {
           library: 'drive',
           version: 'v2',
-          resource: 'files'
+          resource: 'files',
+          id_parameter: 'fileId'
         }
 
       For loading a google cloud endpoints api, specify `api_root`:
@@ -42,7 +44,8 @@ factory('eydisList', function($gapi, $q){
         update: 'update',
         delete: 'delete',
         get: 'get',
-        key_parameter_name: config.api_root ? 'item_key' : 'id'
+        id_parameter: 'itemId',
+        id_field: 'id'
       }, config);
 
       var ready_q = $q.defer();
@@ -109,14 +112,22 @@ factory('eydisList', function($gapi, $q){
 
         params are passed through to the library method.
       */
-      obj.list = wait_for_loaded(function list(params, append){
+      obj.list = wait_for_loaded(function list(params, options){
+        options = angular.extend({
+          method: config.list,
+          append: false
+        }, options || {});
+
         /* store these for next page */
         obj.list.list_params = params || {};
-        var p = library[config.list](params);
+        obj.list.list_options = options;
+
+        /* Execute the method */
+        var p = library[options.method](params);
 
         /* When successful, update our list */
         p.then(function(r){
-          if(!append){
+          if(!options.append){
             obj.items = r.result.items;
           } else {
             obj.items = obj.items.concat(r.result.items);
@@ -136,31 +147,37 @@ factory('eydisList', function($gapi, $q){
         If append is true, then the results are appended to the existing list
         If append is false, then the results replace the existing list
       */
-      obj.list.next_page = function list_next(append){
+      obj.list.next = function list_next(options){
+        options = angular.extend(obj.list.list_options, options);
         obj.list.list_params.page_token = obj.list.list_params.pageToken = obj.list.next_page_token;
-        return obj.list(obj.list.list_params, append);
+        return obj.list(obj.list.list_params, options);
       };
 
       /*
         Add a new object. This saves it using the library's insert() method and
         then optionally inserts the item into the list when successful.
 
-        position, if set, determines where in the list to insert the new item.
+        options.position, if set, determines where in the list to insert the new item.
          * 'start' or 0 will add the item to the beginning.
          * 'end' or -1 will add the item to the end.
          * Any integer will insert the item in that position in the lisy.
       */
-      obj.insert = wait_for_loaded(function insert(data, position){
-        var p = library[config.insert](data);
+      obj.insert = wait_for_loaded(function insert(data, options){
+        options = angular.extend({
+          method: config.insert,
+          position: false
+        }, options || {});
+
+        var p = library[options.method](data);
 
         /* When successful, add the item to our list */
         p.then(function(r){
-          if(position !== undefined){
-            if(position === 'start') position = 0;
-            if(position === 'end' || position === -1){
+          if(options.position !== undefined && options.position !== false){
+            if(options.position === 'start') options.position = 0;
+            if(options.position === 'end' || options.position === -1){
               obj.items.push(r.result);
             } else {
-              obj.items.splice(position, 0, r.result);
+              obj.items.splice(options.position, 0, r.result);
             }
           }
         });
@@ -170,11 +187,16 @@ factory('eydisList', function($gapi, $q){
 
       /*
         Calls the library's delete() method to remove the item and optimistically
-        removes the item from the list unless retain is set to true.
+        removes the item from the list unless options.retain is set to true.
       */
-      obj.delete = wait_for_loaded(function _delete(item, retain){
+      obj.delete = wait_for_loaded(function _delete(item, options){
+        options = angular.extend({
+          method: config.delete,
+          retain: false
+        }, options || {});
+
         /* Go ahead and remove the item from the list before making any requests */
-        if(!retain){
+        if(!options.retain){
           var index = obj.items.indexOf(item);
           if(index !== -1){
             obj.items.splice(index, 1);
@@ -185,8 +207,8 @@ factory('eydisList', function($gapi, $q){
         var key = get_item_key(item);
         if(key){
           var data = {};
-          data[config.key_parameter_name] = key;
-          return library[config.delete](data);
+          data[config.id_parameter] = key;
+          return library[options.method](data);
         }
         /* Otherwise return an empty, successful promise */
         else {
@@ -200,16 +222,21 @@ factory('eydisList', function($gapi, $q){
         Fetches the item using the library's get() method and will update the
         the item in the list if it is present.
       */
-      obj.get = wait_for_loaded(function get(item, no_update){
+      obj.get = wait_for_loaded(function get(item, options){
+        options = angular.extend({
+          method: config.get,
+          update: true
+        }, options || {});
+
         /* Only get if the item actually has a key */
         var key = get_item_key(item);
         if(key){
           var data = {};
-          data[config.key_parameter_name] = key;
-          var p = library[config.get](data);
+          data[config.id_parameter] = key;
+          var p = library[options.method](data);
           /* When succesful, update the item in our list */
           p.then(function(r){
-            if(!no_update){
+            if(options.update){
               var index = obj.items.indexOf(item);
               if(index !== -1){
                 obj.items[index] = r.result;
@@ -230,17 +257,22 @@ factory('eydisList', function($gapi, $q){
         Updates an existing item using the library's update() method
         and will update the item in the list if it is present.
       */
-      obj.update = wait_for_loaded(function update(item, no_update){
+      obj.update = wait_for_loaded(function update(item, options){
+        options = angular.extend({
+          method: config.update,
+          update: true
+        }, options || {});
+
         /* Only update if the item actually has a key */
         var key = get_item_key(item);
         if(key){
           var data = strip_item_key(angular.copy(item));
-          data[config.key_parameter_name] = key;
-          var p = library[config.update](data);
+          data[config.id_parameter] = key;
+          var p = library[options.method](data);
 
           /* When succesful, update the item in our list */
           p.then(function(r){
-            if(!no_update){
+            if(options.update){
               var index = obj.items.indexOf(item);
               if(index !== -1){
                 obj.items[index] = r.result;
@@ -259,18 +291,14 @@ factory('eydisList', function($gapi, $q){
 
       /* Helper function for seeing if an item has a key or not */
       var get_item_key = function(item){
-        if(item.datastore_key && item.datastore_key.urlsafe) return item.datastore_key.urlsafe;
-        if(item.id) return item.id;
+        if(item[config.id_field]) return item[config.id_field];
         return null;
       };
 
       /* Helper function to remove the key from an object before submitting it */
       var strip_item_key = function(item){
-        if(item.datastore_key){
-          delete item.datastore_key;
-        }
-        else if(item.id){
-          delete item.id;
+        if(item[config.id_field]){
+          delete item[config.id_field];
         }
         return item;
       };

@@ -32,7 +32,12 @@ angular.module('app', ['eydis.list']).
     this.files = eydisList({
       library: 'drive',
       version: 'v2',
-      resource: 'files'
+      resource: 'files',
+      /*
+        This is the parameter you pass to a request to get, update, or delete.
+        In google APIs this is typically '[resource]Id', for example 'fileId'.
+      */
+      id_parameter: 'fileId'
     });
 
     /* Make the initial call to load the list */
@@ -55,7 +60,8 @@ angular.module('app', ['eydis.list'])
           return eydisList({
             library: 'drive',
             version: 'v2',
-            resource: 'files'
+            resource: 'files',
+            id_parameter: 'fileId'
           }).ready;
         }
       }
@@ -82,19 +88,19 @@ Showing the list in the template is very easy.
 The service (``files`` in the above example) provides the following for loading and pagination:
 
  * ``service.items`` is an array of all of the currently loaded items.
- * ``service.list([params])`` will fetch the items from the server.
+ * ``service.list([params], [options])`` will fetch the items from the server.
 
     ```javascript
     this.files.list({maxResults: 10});
     this.files.list({maxResults: 10, query: 'red'});
     ```
  * ``service.list.more`` indicates if there is another page of results that can be loaded.
- * ``service.list.next_page([append])`` will load the next page, re-using the parameters passed to get the first page. If append is specified, it'll combine the new results with the existing list instead of replacing.
+ * ``service.list.next([options])`` will load the next page, re-using the parameters passed to get the first page. If options.append is specified, it'll combine the new results with the existing list instead of replacing.
     
     ```html
     <button type="button"
         ng-show="example.files.list.more"
-        ng-click="example.files.list.next_page()">
+        ng-click="example.files.list.next()">
         Load More
     </button>
     ```
