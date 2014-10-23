@@ -72,7 +72,7 @@ factory('eydisList', function($gapi, $q){
 
       /* Do we need to load the library? */
       if(angular.isString(config.library)){
-        library_promise =  $gapi.load(config.library, config.version, config.api_root).then(function(){
+        library_promise = $gapi.load(config.library, config.version, config.api_root).then(function(){
             library = $gapi.client[config.library][config.resource];
             return library;
         });
@@ -128,9 +128,9 @@ factory('eydisList', function($gapi, $q){
         /* When successful, update our list */
         p.then(function(r){
           if(!options.append){
-            obj.items = r.result.items;
+            obj.items = r.result.items || [];
           } else {
-            obj.items = obj.items.concat(r.result.items);
+            obj.items = obj.items.concat(r.result.items || []);
           }
           obj.list.next_page_token = r.result.next_page_token || r.result.nextPageToken;
           obj.list.more = !!obj.list.next_page_token;
